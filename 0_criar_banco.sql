@@ -129,7 +129,7 @@ CREATE TABLE silver_viagem (
 );
 
 CREATE TABLE silver_pagamento (
-    id_pagamento BIGSERIAL PRIMARY KEY,
+    id_pagamento SERIAL PRIMARY KEY,
     id_viagem VARCHAR(20) NOT NULL,
     num_proposta VARCHAR(20),
     nome_orgao_pagador VARCHAR(255),
@@ -140,7 +140,7 @@ CREATE TABLE silver_pagamento (
 );
 
 CREATE TABLE silver_passagem (
-    id_passagem BIGSERIAL PRIMARY KEY,
+    id_passagem SERIAL PRIMARY KEY,
     id_viagem VARCHAR(20) NOT NULL,
     meio_transporte VARCHAR(50),
     pais_origem_ida VARCHAR(60),
@@ -156,7 +156,7 @@ CREATE TABLE silver_passagem (
 );
 
 CREATE TABLE silver_trecho (
-    id_trecho BIGSERIAL PRIMARY KEY,
+    id_trecho SERIAL PRIMARY KEY,
     id_viagem VARCHAR(20) NOT NULL,
     sequencia_trecho INT,
     origem_data DATE,
