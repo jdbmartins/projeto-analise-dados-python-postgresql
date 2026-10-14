@@ -53,11 +53,19 @@ ORDER BY 1, 2;
 -- 7. Camada Gold: tabela e VIEW devem existir depois da execução do notebook.
 SELECT table_name
 FROM information_schema.tables
-WHERE table_name = 'gold_orgao';
+WHERE table_name IN ('gold_orgao', 'gold_orgao_pagador', 'gold_tipo_pagamento', 'gold_transporte', 'gold_uf_destino');
 
 SELECT table_name, table_type
 FROM information_schema.views
-WHERE table_name = 'vw_gold_orgao';
+WHERE table_name IN ('vw_gold_orgao', 'vw_gold_orgao_pagador', 'vw_gold_tipo_pagamento', 'vw_gold_transporte', 'vw_gold_uf_destino');
 
 -- 8. Conferência das respostas de negócio gravadas na Gold.
 SELECT * FROM gold_orgao ORDER BY custo_total DESC LIMIT 5;
+
+
+-- 9. Órgão pagador efetivo (a maior soma deve coincidir com a pergunta 7).
+SELECT * FROM vw_gold_orgao_pagador ORDER BY total_pago DESC LIMIT 5;
+
+SELECT * FROM vw_gold_tipo_pagamento ORDER BY valor_medio DESC LIMIT 5;
+SELECT * FROM vw_gold_transporte ORDER BY quantidade_trechos DESC LIMIT 5;
+SELECT * FROM vw_gold_uf_destino ORDER BY quantidade_trechos DESC LIMIT 5;

@@ -54,10 +54,9 @@ ANO = "2025"
 
 # ---- De onde baixar o .zip ----
 # O arquivo (enxuto, so com jan-jun de 2025) fica no Google Drive da escola.
-# ID do arquivo no Google Drive:
-# Como obter: no Drive clique em "Compartilhar" -> "Qualquer pessoa com o link";
-# o link fica .../file/d/ESTE_TRECHO_E_O_ID/view -> copie o ID e cole abaixo.
-DRIVE_FILE_ID = "COLE_AQUI_O_ID_DO_ARQUIVO_NO_DRIVE"
+# O ID deve ser informado no arquivo .env (DRIVE_FILE_ID=...).
+# Não invente um ID: use o identificador do ZIP oficial fornecido na atividade.
+DRIVE_FILE_ID = os.environ.get("DRIVE_FILE_ID", "").strip()
 
 # Tamanho do bloco de leitura/insercao (numero de linhas por vez).
 # Ler tudo de uma vez estouraria a memoria; por isso lemos em "pedacos".

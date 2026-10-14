@@ -41,6 +41,41 @@ COLUNAS_RAW = {
 }
 
 
+# Cabeçalhos oficiais dos quatro CSVs fornecidos na atividade. A validação ignora
+# apenas espaços nas extremidades e diferenças entre maiúsculas/minúsculas.
+CABECALHOS_CSV = {
+    "viagem": [
+        "Identificador do processo de viagem", "Número da Proposta (PCDP)", "Situação",
+        "Viagem Urgente", "Justificativa Urgência Viagem", "Código do órgão superior",
+        "Nome do órgão superior", "Código órgão solicitante", "Nome órgão solicitante",
+        "CPF viajante", "Nome", "Cargo", "Função", "Descrição Função",
+        "Período - Data de início", "Período - Data de fim", "Destinos", "Motivo",
+        "Valor diárias", "Valor passagens", "Valor devolução", "Valor outros gastos",
+    ],
+    "pagamento": [
+        "Identificador do processo de viagem", "Número da Proposta (PCDP)",
+        "Código do órgão superior", "Nome do órgão superior", "Codigo do órgão pagador",
+        "Nome do órgao pagador", "Código da unidade gestora pagadora",
+        "Nome da unidade gestora pagadora", "Tipo de pagamento", "Valor",
+    ],
+    "passagem": [
+        "Identificador do processo de viagem", "Número da Proposta (PCDP)",
+        "Meio de transporte", "País - Origem ida", "UF - Origem ida", "Cidade - Origem ida",
+        "País - Destino ida", "UF - Destino ida", "Cidade - Destino ida",
+        "País - Origem volta", "UF - Origem volta", "Cidade - Origem volta",
+        "Pais - Destino volta", "UF - Destino volta", "Cidade - Destino volta",
+        "Valor da passagem", "Taxa de serviço", "Data da emissão/compra",
+        "Hora da emissão/compra",
+    ],
+    "trecho": [
+        "Identificador do processo de viagem", "Número da Proposta (PCDP)",
+        "Sequência Trecho", "Origem - Data", "Origem - País", "Origem - UF",
+        "Origem - Cidade", "Destino - Data", "Destino - País", "Destino - UF",
+        "Destino - Cidade", "Meio de transporte", "Número Diárias", "Missao?",
+    ],
+}
+
+
 def baixar_zip():
     """Baixa o ZIP do Google Drive somente quando ele ainda não está localmente."""
     PASTA_DADOS.mkdir(parents=True, exist_ok=True)
@@ -56,11 +91,14 @@ def baixar_zip():
             "Cole o ID do arquivo do Google Drive para permitir o download automático."
         )
 
-    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
     print("Baixando o ZIP do Google Drive...")
-    caminho = gdown.download(url, str(destino), quiet=False)
-    if not caminho:
-        raise RuntimeError("Falha no download do arquivo do Google Drive.")
+    caminho = gdown.download(id=DRIVE_FILE_ID, output=str(destino), quiet=False)
+    if not caminho or not destino.exists() or destino.stat().st_size == 0:
+        destino.unlink(missing_ok=True)
+        raise RuntimeError(
+            "Falha no download do Google Drive. Confirme se DRIVE_FILE_ID no .env "
+            "é o ID correto e se o arquivo está acessível à conta/ao link utilizado."
+        )
     return Path(caminho)
 
 
@@ -69,6 +107,9 @@ def extrair_csvs(caminho_zip):
     pasta = PASTA_DADOS / "extraido"
     pasta.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(caminho_zip) as arquivo_zip:
+        arquivo_corrompido = arquivo_zip.testzip()
+        if arquivo_corrompido:
+            raise RuntimeError(f"Arquivo ZIP corrompido; primeiro membro inválido: {arquivo_corrompido}")
         nomes = set(arquivo_zip.namelist())
         esperados = {item["csv"] for item in ARQUIVOS.values()}
         faltantes = esperados - nomes
@@ -83,13 +124,21 @@ def carregar_raw(conexao, tipo, caminho_csv):
     """Lê um CSV em blocos e insere o conteúdo sem alterar seus valores."""
     tabela = ARQUIVOS[tipo]["tabela_raw"]
     colunas = COLUNAS_RAW[tipo]
-    placeholders = ", ".join(["%s"] * len(colunas))
     sql = f"INSERT INTO {tabela} ({', '.join(colunas)}) VALUES %s"
 
     total = 0
     with open(caminho_csv, "r", encoding=CSV_ENCODING, newline="") as arquivo:
         leitor = csv.reader(arquivo, delimiter=CSV_SEPARADOR)
-        cabecalho = next(leitor)
+        cabecalho = next(leitor, None)
+        if cabecalho is None:
+            raise ValueError(f"CSV vazio ou sem cabeçalho: {caminho_csv.name}")
+        esperado = CABECALHOS_CSV[tipo]
+        normalizar = lambda nomes: [nome.strip().casefold() for nome in nomes]
+        if normalizar(cabecalho) != normalizar(esperado):
+            raise ValueError(
+                f"{caminho_csv.name}: cabeçalho diferente do CSV esperado para '{tipo}'. "
+                "Verifique se o arquivo é o fornecido na atividade e se a ordem das colunas foi preservada."
+            )
         bloco = []
         for numero_linha, linha in enumerate(leitor, start=2):
             if len(linha) != len(colunas):
@@ -121,13 +170,18 @@ def main():
                 cursor.execute(
                     "TRUNCATE TABLE raw_pagamento, raw_passagem, raw_trecho, raw_viagem;"
                 )
-            conexao.commit()
 
             for tipo in ("viagem", "pagamento", "passagem", "trecho"):
                 print(f"Carregando {tipo}...")
                 total = carregar_raw(conexao, tipo, csvs[tipo])
-                conexao.commit()
-                print(f"OK: {total:,} registros em {ARQUIVOS[tipo]['tabela_raw']}.\n")
+                print(f"OK: {total:,} registros preparados em {ARQUIVOS[tipo]['tabela_raw']}.\n")
+            # Confirma todas as quatro tabelas em uma única transação. Se qualquer
+            # arquivo falhar, o rollback restaura a carga anterior completa.
+            conexao.commit()
+            print("Carga Raw completa e confirmada em uma única transação.")
+        except Exception:
+            conexao.rollback()
+            raise
         finally:
             conexao.close()
     except Exception as erro:

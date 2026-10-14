@@ -70,6 +70,7 @@ As respostas são calculadas no PostgreSQL e exibidas no notebook com tabelas e 
 
 ```text
 projeto/
+├── 00_criar_database.sql
 ├── 0_criar_banco.sql
 ├── 1_extrair.py
 ├── 2_transformar.py
@@ -89,17 +90,11 @@ projeto/
 
 ### 6.1 Criar o banco
 
-No pgAdmin, conecte-se ao banco padrão `postgres` e execute:
-
-```sql
-CREATE DATABASE transparencia;
-```
-
-Depois, conecte o Query Tool do pgAdmin ao banco `transparencia`.
+No pgAdmin, conecte-se ao banco padrão `postgres` e execute o arquivo `00_criar_database.sql` uma única vez. Depois, conecte o Query Tool ao database `transparencia` e execute `0_criar_banco.sql`. A criação do database é separada porque o PostgreSQL não permite executar `CREATE DATABASE` dentro de uma transação nem trocar a conexão de database no meio de um script SQL comum.
 
 ### 6.2 Criar as tabelas
 
-Abra `0_criar_banco.sql` e execute a parte de criação das oito tabelas no banco `transparencia`.
+Abra `0_criar_banco.sql` e execute a criação das oito tabelas no banco `transparencia`.
 
 São criadas:
 
@@ -137,15 +132,7 @@ Instale:
 pip install -r requirements.txt
 ```
 
-Copie `.env.example` para `.env` e preencha a senha do PostgreSQL.
-
-Em `config.py`, substitua:
-
-```python
-DRIVE_FILE_ID = "COLE_AQUI_O_ID_DO_ARQUIVO_NO_DRIVE"
-```
-
-pelo ID do ZIP disponibilizado no Google Drive da atividade.
+Copie `.env.example` para `.env` e preencha a senha do PostgreSQL. O ZIP de dados acompanha este pacote em `data/`. Se você mover o projeto para um repositório GitHub e executar em outra máquina sem esse ZIP, informe `DRIVE_FILE_ID` no `.env` com o identificador real do arquivo disponibilizado no Google Drive da atividade. Esse identificador não consta no documento de requisitos e, por isso, não foi inventado no código.
 
 ## 8. Execução do pipeline
 
@@ -159,7 +146,7 @@ python 1_extrair.py
 
 O script:
 
-- baixa o ZIP do Google Drive quando ele não está disponível localmente;
+- utiliza o ZIP incluído em `data/` quando ele está disponível; caso contrário, baixa do Google Drive usando `DRIVE_FILE_ID` configurado no `.env`;
 - extrai os quatro CSVs;
 - lê os arquivos em blocos de 50.000 registros;
 - executa `TRUNCATE` antes da carga, tornando o processo idempotente;
@@ -188,9 +175,10 @@ O notebook:
 
 - responde às sete perguntas de negócio;
 - cria gráficos com títulos e eixos identificados;
-- cria a tabela `gold_orgao`;
-- cria a VIEW `vw_gold_orgao`;
-- apresenta uma visão consolidada da Gold.
+- cria a tabela `gold_orgao` e a VIEW `vw_gold_orgao`, agregadas por órgão superior;
+- cria a tabela `gold_orgao_pagador` e a VIEW `vw_gold_orgao_pagador`, agregadas pelo órgão pagador efetivo;
+- cria as agregações `gold_tipo_pagamento`, `gold_transporte` e `gold_uf_destino`, cada uma acompanhada de VIEW;
+- responde às perguntas 4, 5 e 6 por meio das VIEWs Gold agregadas e evita confundir órgão superior com órgão pagador.
 
 ## 9. Validação pelo pgAdmin
 
@@ -204,7 +192,7 @@ A validação verifica:
 - unicidade de `(id_viagem, sequencia_trecho)`;
 - tipos das colunas Silver;
 - constraints cadastradas;
-- existência da tabela e da VIEW Gold.
+- existência das tabelas e VIEWs Gold, inclusive as agregações das perguntas 4, 5 e 6.
 
 ## 10. Boas práticas
 
@@ -213,7 +201,7 @@ A validação verifica:
 - O código é separado por etapa do pipeline.
 - A carga Raw é idempotente.
 - A transformação ocorre no PostgreSQL, preservando a Raw.
-- Os pagamentos são agregados por viagem antes da consolidação da Gold, evitando multiplicação de valores causada por múltiplos registros relacionados.
+- Os pagamentos associados às viagens são agregados por viagem antes da consolidação de custo por órgão superior, evitando multiplicação de valores em JOINs; o total pago por órgão pagador é calculado separadamente a partir dos registros de pagamento.
 
 ## 11. Possíveis melhorias
 
