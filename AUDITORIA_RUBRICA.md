@@ -4,12 +4,12 @@
 |---|---|---|
 | 1. Versionamento | `main` + branches `feature/database`, `feature/raw`, `feature/silver`, `feature/gold` e `docs/readme`, com commits por funcionalidade | OK |
 | 2. Organização | SQL, Python, notebook, README, `.env.example`, `.gitignore` e validação pgAdmin separados | OK |
-| 3. Extração/Raw | Download via Google Drive com `gdown`, leitura em blocos, `TRUNCATE`, `try/except` e carga dos 4 CSVs | OK |
-| 4. Tipagem/limpeza | Raw → Silver com `DATE`, `DECIMAL`, `INT`, tratamento de vírgula decimal e datas | OK |
-| 5. Gold | `gold_orgao` e `gold_orgao_pagador` com `JOIN` + `GROUP BY`; agregações adicionais `gold_tipo_pagamento`, `gold_transporte` e `gold_uf_destino`, cada uma com VIEW | Implementado; executar para comprovar |
-| 6. Perguntas de negócio | As 7 perguntas da atividade estão implementadas com consultas SQL; as perguntas 4, 5, 6 e 7 usam VIEWs Gold agregadas | Implementado; conferir resultados após execução |
-| 7. Dataviz | Cada pergunta possui gráfico com título, eixos nomeados e legenda | Implementado; conferir renderização no notebook |
-| 8. Modelagem Silver | PK, FK e 2 constraints adicionais em cada tabela Silver | OK |
+| 3. Extração/Raw | Download via Google Drive com `gdown`, leitura em blocos, `TRUNCATE`, `try/except` e carga dos 4 CSVs | Executado duas vezes; contagens estáveis e iguais aos CSVs |
+| 4. Tipagem/limpeza | Raw → Silver com `DATE`, `DECIMAL`, `INT`, tratamento de vírgula decimal e datas | Script executado com sucesso; contagens Raw/Silver iguais |
+| 5. Gold | `gold_orgao` e `gold_orgao_pagador` com `JOIN` + `GROUP BY`; agregações adicionais `gold_tipo_pagamento`, `gold_transporte` e `gold_uf_destino`, cada uma com VIEW | 5 tabelas e 5 views existentes; conteúdo correspondente sem diferenças |
+| 6. Perguntas de negócio | As 7 perguntas da atividade estão implementadas com consultas SQL; as perguntas 4, 5, 6 e 7 usam VIEWs Gold agregadas | Notebook executado; consultas retornaram tabelas com resultados |
+| 7. Dataviz | Cada pergunta possui gráfico com título, eixos nomeados e legenda | Gráficos conferidos; eixos monetários em BRL e contagens sem moeda |
+| 8. Modelagem Silver | PK, FK e 2 constraints adicionais em cada tabela Silver | 4 PKs, 3 FKs, 5 CHECKs e 1 UNIQUE; verificações de integridade zeradas |
 
 ## Constraints Silver
 
@@ -32,4 +32,19 @@ Além dessas oito constraints exigidas, as quatro tabelas Silver possuem PK e as
 - O script `4_validacao_pgadmin.sql` também verifica as novas estruturas Gold.
 - As perguntas 4, 5 e 6 consultam `vw_gold_tipo_pagamento`, `vw_gold_transporte` e `vw_gold_uf_destino`, respectivamente, e mantêm seus gráficos correspondentes.
 
-**Limite da auditoria:** a validação de código e estrutura não substitui a execução no ambiente PostgreSQL do usuário. Execute o roteiro do README e registre a saída de `4_validacao_pgadmin.sql` antes da submissão.
+## Resultado da validação executada
+
+| Tabela | Raw | Silver |
+|---|---:|---:|
+| `viagem` | 341.860 | 341.860 |
+| `pagamento` | 606.916 | 606.916 |
+| `passagem` | 167.260 | 167.260 |
+| `trecho` | 763.349 | 763.349 |
+
+- `1_extrair.py` foi executado duas vezes; as contagens permaneceram estáveis e coincidiram com os registros dos quatro CSVs.
+- `2_transformar.py` concluiu com sucesso. Órfãos, valores negativos e duplicidades `(id_viagem, sequencia_trecho)` retornaram zero.
+- As sete consultas do notebook retornaram resultados e seus gráficos foram renderizados. A viagem mais longa tem 383 dias e custo zero; esse dado atípico deve ser conferido na fonte.
+- As cinco tabelas Gold e suas cinco VIEWs foram comparadas, sem diferenças. O total de pagamentos por órgão também coincidiu com uma agregação independente sobre `silver_pagamento`.
+- `4_validacao_pgadmin.sql` foi executado integralmente contra o banco PostgreSQL configurado, sem erro. A execução foi feita via conexão do projeto, não pela interface gráfica do pgAdmin.
+
+**Limite da auditoria:** o DOCX original da atividade não estava disponível como arquivo legível no workspace durante esta revisão; os critérios acima foram conferidos com base nesta auditoria local e nos testes executados. A execução SQL validou o banco configurado, mas não a interface gráfica do pgAdmin.

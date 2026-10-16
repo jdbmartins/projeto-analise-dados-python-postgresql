@@ -51,13 +51,19 @@ WHERE conrelid::regclass::text IN ('silver_viagem','silver_pagamento','silver_pa
 ORDER BY 1, 2;
 
 -- 7. Camada Gold: tabela e VIEW devem existir depois da execução do notebook.
-SELECT table_name
-FROM information_schema.tables
-WHERE table_name IN ('gold_orgao', 'gold_orgao_pagador', 'gold_tipo_pagamento', 'gold_transporte', 'gold_uf_destino');
-
+-- 7.1 - Verificar as tabelas Gold
 SELECT table_name, table_type
+FROM information_schema.tables
+WHERE table_schema = 'public'
+    AND table_name LIKE 'gold_%'
+ORDER BY table_name;
+
+-- 7.2 - Verificar as views Gold
+SELECT table_name
 FROM information_schema.views
-WHERE table_name IN ('vw_gold_orgao', 'vw_gold_orgao_pagador', 'vw_gold_tipo_pagamento', 'vw_gold_transporte', 'vw_gold_uf_destino');
+WHERE table_schema = 'public'
+    AND table_name LIKE 'vw_gold_%'
+ORDER BY table_name;
 
 -- 8. Conferência das respostas de negócio gravadas na Gold.
 SELECT * FROM gold_orgao ORDER BY custo_total DESC LIMIT 5;
