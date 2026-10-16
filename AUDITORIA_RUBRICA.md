@@ -3,8 +3,8 @@
 | Critério | Implementação | Situação |
 |---|---|---|
 | 1. Versionamento | `main` + branches `feature/database`, `feature/raw`, `feature/silver`, `feature/gold` e `docs/readme`, com commits por funcionalidade | OK |
-| 2. Organização | SQL, Python, notebook, README, `.env.example`, `.gitignore` e validação pgAdmin separados | OK |
-| 3. Extração/Raw | Download via Google Drive com `gdown`, leitura em blocos, `TRUNCATE`, `try/except` e carga dos 4 CSVs | Executado duas vezes; contagens estáveis e iguais aos CSVs |
+| 2. Organização | SQL, Python, notebook, README, `.env.example`, `.gitignore` e validação pgAdmin separados; CSVs locais ficam em `data/` | Estrutura local organizada; CSVs não versionados conforme seção 5.2 do PDF, embora o critério 2 cite arquivos `.csv` no repositório |
+| 3. Extração/Raw | Download via Google Drive com `gdown`, leitura em blocos, `TRUNCATE`, `try/except` e carga dos 4 CSVs | Download oficial testado por `baixar_zip()`; SHA-256 idêntico ao ZIP local; carga idempotente validada |
 | 4. Tipagem/limpeza | Raw → Silver com `DATE`, `DECIMAL`, `INT`, tratamento de vírgula decimal e datas | Script executado com sucesso; contagens Raw/Silver iguais |
 | 5. Gold | `gold_orgao` e `gold_orgao_pagador` com `JOIN` + `GROUP BY`; agregações adicionais `gold_tipo_pagamento`, `gold_transporte` e `gold_uf_destino`, cada uma com VIEW | 5 tabelas e 5 views existentes; conteúdo correspondente sem diferenças |
 | 6. Perguntas de negócio | As 7 perguntas da atividade estão implementadas com consultas SQL; as perguntas 4, 5, 6 e 7 usam VIEWs Gold agregadas | Notebook executado; consultas retornaram tabelas com resultados |
@@ -25,7 +25,7 @@ Além dessas oito constraints exigidas, as quatro tabelas Silver possuem PK e as
 
 - Corrigida a vírgula excedente no `CREATE TABLE silver_viagem`.
 - Colunas Raw declaradas como `VARCHAR` sem limite artificial de tamanho para preservar os campos originais.
-- O ID do Google Drive é configurado por variável `DRIVE_FILE_ID` no `.env`; não há ID inventado no código. O pacote fornecido inclui o ZIP local para execução sem download.
+- O ID oficial do ZIP está em `DRIVE_FILE_ID` no `.env.example`; o `.env` local contém o mesmo ID e continua ignorado pelo Git. O download remoto foi testado.
 - A carga Raw é confirmada em uma única transação: se um CSV falhar, as quatro tabelas voltam ao estado anterior.
 - A consulta de destinos não exclui destinos com apenas uma viagem sem justificativa.
 - A pergunta 7 consulta o órgão pagador efetivo (`nome_orgao_pagador`) por meio de uma agregação Gold própria, distinta do órgão superior da viagem.
@@ -41,10 +41,11 @@ Além dessas oito constraints exigidas, as quatro tabelas Silver possuem PK e as
 | `passagem` | 167.260 | 167.260 |
 | `trecho` | 763.349 | 763.349 |
 
+- `baixar_zip()` baixou o ZIP oficial a partir do ID fornecido; o SHA-256 coincidiu com o arquivo local.
 - `1_extrair.py` foi executado duas vezes; as contagens permaneceram estáveis e coincidiram com os registros dos quatro CSVs.
 - `2_transformar.py` concluiu com sucesso. Órfãos, valores negativos e duplicidades `(id_viagem, sequencia_trecho)` retornaram zero.
 - As sete consultas do notebook retornaram resultados e seus gráficos foram renderizados. A viagem mais longa tem 383 dias e custo zero; esse dado atípico deve ser conferido na fonte.
 - As cinco tabelas Gold e suas cinco VIEWs foram comparadas, sem diferenças. O total de pagamentos por órgão também coincidiu com uma agregação independente sobre `silver_pagamento`.
 - `4_validacao_pgadmin.sql` foi executado integralmente contra o banco PostgreSQL configurado, sem erro. A execução foi feita via conexão do projeto, não pela interface gráfica do pgAdmin.
 
-**Limite da auditoria:** o DOCX original da atividade não estava disponível como arquivo legível no workspace durante esta revisão; os critérios acima foram conferidos com base nesta auditoria local e nos testes executados. A execução SQL validou o banco configurado, mas não a interface gráfica do pgAdmin.
+**Nota sobre a organização dos dados:** o PDF pede que ZIP/CSVs e `data/` sejam ignorados no `.gitignore`, mas o critério 2 também cita arquivos `.csv` no repositório. Os dados permanecem organizados localmente em `data/` e não foram versionados, conforme a instrução específica para ignorá-los. A validação do SQL foi feita via conexão PostgreSQL do projeto, não pela interface gráfica do pgAdmin.

@@ -132,7 +132,7 @@ Instale:
 pip install -r requirements.txt
 ```
 
-Copie `.env.example` para `.env` e preencha a senha do PostgreSQL. O ZIP de dados acompanha este pacote em `data/`. Se você mover o projeto para um repositório GitHub e executar em outra máquina sem esse ZIP, informe `DRIVE_FILE_ID` no `.env` com o identificador real do arquivo disponibilizado no Google Drive da atividade. Esse identificador não consta no documento de requisitos e, por isso, não foi inventado no código.
+Copie `.env.example` para `.env` e preencha a senha do PostgreSQL. O exemplo já contém o ID do ZIP oficial no Google Drive. Os dados locais são ignorados pelo Git e não acompanham o repositório; após clonar, o script baixa o ZIP automaticamente. Se o ZIP já estiver disponível localmente, coloque-o em `data/viagens_2025_6meses.zip`; nesse caso o script usa o arquivo local.
 
 ## 8. Execução do pipeline
 
@@ -146,7 +146,7 @@ python 1_extrair.py
 
 O script:
 
-- utiliza o ZIP incluído em `data/` quando ele está disponível; caso contrário, baixa do Google Drive usando `DRIVE_FILE_ID` configurado no `.env`;
+- utiliza o ZIP em `data/` quando ele está disponível; caso contrário, baixa o ZIP oficial do Google Drive usando `DRIVE_FILE_ID` do `.env` (preenchido pelo `.env.example`);
 - extrai os quatro CSVs;
 - lê os arquivos em blocos de 50.000 registros;
 - executa `TRUNCATE` antes da carga, tornando o processo idempotente;
